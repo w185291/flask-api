@@ -1,0 +1,19 @@
+{% extends 'main.html' %}
+
+{% block otherCss %}
+    <link href="{{ url_for('static', filename='css/login.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<form method='post' action='' enctype="multipart/form-data" class="form-signin">
+
+    <div class="mb-3">
+        <label for="formFile" class="form-label">Upload Test</label>
+        <input class="form-control" type="file" name="file" id="formFile">
+    </div>
+
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+  
+  </form>
+
+  {% endblock %}

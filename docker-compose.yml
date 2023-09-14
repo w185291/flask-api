@@ -1,0 +1,82 @@
+version: "3.9"
+
+volumes:
+  db-store:
+services:
+  flask-db:
+    container_name: 'flask-db'
+    build:
+      context: .
+      dockerfile: docker/mysql/Dockerfile
+    
+    platform: linux/x86_64
+    volumes:
+      - type: volume
+        source: db-store
+        target: /var/lib/mysql
+        volume:
+          nocopy: true
+      - type: bind
+        source: docker/mysql/init.sql
+        target: /docker-entrypoint-initdb.d/init.sql
+    user: root
+    ports:
+      - target: 3306
+        published: 3307
+        protocol: tcp
+        mode: host
+
+    environment:
+      - MYSQL_DATABASE=flask_db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=secret
+      - MYSQL_ROOT_PASSWORD=secret
+      - MYSQL_ROOT_HOST=%
+
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -uuser -psecret
+      # ヘルスチェックのインターバルは10秒
+      interval: 10s
+      # タイムアウト時間は10秒
+      timeout: 10s
+      # リトライ回数は3回
+      retries: 3
+      # ヘルスチェックが失敗しても無視する時間は30秒
+      start_period: 30s
+    networks:
+          - flask-net
+
+  flask-app:
+    container_name: 'flask-app'
+    build:
+      context: .
+      dockerfile: docker/py/Dockerfile
+    ports:
+      - target: 5000
+        published: 5001
+        protocol: tcp
+        mode: host
+    volumes:
+      - type: bind
+        source: .
+        target: /usr/src/app
+        consistency: delegated
+    depends_on:
+      flask-db:
+        # dbのヘルスチェックが終わってからappを起動させる
+        condition: service_healthy
+    tty: true
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=flask-db
+      - DB_PORT=3306
+      - DB_DATABASE=flask_db
+      - DB_USERNAME=user
+      - DB_PASSWORD=secret
+    networks:
+       - flask-net
+
+networks:
+  flask-net:
+    driver: bridge
+
